@@ -4,6 +4,7 @@ import "./App.css";
 import { Grid, Fab, Slider } from "@material-ui/core";
 import PlayArrow from "@material-ui/icons/PlayArrow";
 import Pause from "@material-ui/icons/Pause";
+import { insertUrlParam } from "./utils";
 
 import {
   BarChart,
@@ -21,32 +22,42 @@ const colorMap = {
   1: "#90b6ff"
 };
 
+const YEAR = 'year'
+const PAUSED = 'paused'
+
 const pigData = wildPigData["PIG POPULATIONS"];
 
-const uniqYears = new Set(pigData.map(el => el.year))
-const yearSelection =  Array.from(uniqYears)
+const uniqYears = new Set(pigData.map(el => el.year));
+const yearSelection = Array.from(uniqYears);
 
 const getYearData = year => pigData.filter(el => el.year === year);
 
-const TIME_STEP = 1000
+const TIME_STEP = 2000;
+
+const searchParams = new URLSearchParams(window.location.search);
+const paused = searchParams.get(PAUSED) === "true";
+const queryYear = searchParams.get(YEAR);
+const year = queryYear ? Number(queryYear) : yearSelection[0];
 
 class App extends Component {
   state = {
-    data: getYearData(2000),
-    paused: false,
-    year: 2000
+    data: getYearData(year),
+    paused,
+    year
   };
 
-  timerId = null
+  timerId = null;
 
   handleClick = () => {
     this.setState(prevState => {
       const nextPaused = !prevState.paused;
 
+      insertUrlParam(PAUSED, String(nextPaused));
+
       if (nextPaused) {
-        this.stopTimer()
+        this.stopTimer();
       } else {
-        this.startTimer()
+        this.startTimer();
       }
 
       return {
@@ -64,21 +75,27 @@ class App extends Component {
   startTimer = () => {
     this.timerId = setTimeout(() => {
       this.setState(prevState => {
-        const nextIndex = yearSelection.findIndex(el => el === prevState.year) + 1;
-        const nextYear = yearSelection.length > nextIndex ? yearSelection[nextIndex] : yearSelection[0];
+        const nextIndex =
+          yearSelection.findIndex(el => el === prevState.year) + 1;
+        const nextYear =
+          yearSelection.length > nextIndex
+            ? yearSelection[nextIndex]
+            : yearSelection[0];
+
+        insertUrlParam(YEAR, nextYear);
 
         return {
           data: getYearData(nextYear),
           year: nextYear
         };
       });
-      this.startTimer()
+      this.startTimer();
     }, TIME_STEP);
   };
 
   stopTimer = () => {
-    clearTimeout(this.timerId)
-  }
+    clearTimeout(this.timerId);
+  };
 
   render() {
     return (
@@ -94,10 +111,10 @@ class App extends Component {
           <Grid item>
             <BarChart width={800} height={400} data={this.state.data}>
               <XAxis dataKey="island" />
-              <YAxis yAxisId="a" />
+              <YAxis yAxisId="pigPopulation" />
               <Tooltip />
               <CartesianGrid vertical={false} />
-              <Bar yAxisId="a" dataKey="pigPopulation">
+              <Bar yAxisId="pigPopulation" dataKey="pigPopulation">
                 <LabelList fill="#000" />
                 {this.state.data.map((entry, index) => (
                   <Cell key={entry.island} fill={colorMap[index % 2]} />
